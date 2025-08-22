@@ -21,11 +21,13 @@ Dependency Injection.
 ## Запуск
 
 1. Скопируйте .env-example в .env и настройте.
-2.1 Создайте новое окружение `python -m venv .venv` и активируйте его `source ./.venv/vin/activate`.
-2.2 Или с помощью uv: `uv venv`
-2. Установите зависимости: `uv sync --locked` или `pip compile pyproject.toml -o requirements.txt`
-3. Запустите: `uvicorn app.main:app --reload`
-4. Swagger: <http://localhost:8000/docs>
+2. Создайте новое окружение `python -m venv .venv` и активируйте его `source ./.venv/vin/activate`.
+3. Или с помощью uv: `uv venv`.
+4. Установите зависимости: `uv sync --locked` или `pip compile pyproject.toml -o requirements.txt`.
+5. Инициализируйте базу данных `alembic upgrade head`
+6. Запустите тесты `pytest -vv --cov`
+7. Запустите: `uvicorn app.main:app --reload`
+8. Swagger: <http://localhost:8000/docs>
 
 ## Docker
 
