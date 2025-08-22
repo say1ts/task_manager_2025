@@ -18,6 +18,21 @@ Dependency Injection.
 
 Код отформатирован с помощью дефолтных настроек black.
 
+## Docker
+
+`docker build -t task-manager .`
+`docker run -p 8000:8000 --env-file .env task-manager`
+
+## Тестирование
+
+Код готов к тестам на pytest.
+
+![pytest](doc/pytest.png)
+
+Покрытие 91%:
+![pytest-cov](doc/pytest-cov.png)
+
+
 ## Запуск
 
 1. Скопируйте .env-example в .env и настройте.
@@ -29,15 +44,6 @@ Dependency Injection.
 7. Запустите: `uvicorn app.main:app --reload`
 8. Swagger: <http://localhost:8000/docs>
 
-## Docker
-
-`docker build -t task-manager .`
-`docker run -p 8000:8000 --env-file .env task-manager`
-
 ## Переход на PostgreSQL
 
 Измените DATABASE_URL в .env на postgresql+asyncpg://...
-
-## Тестирование
-
-Код готов к тестам на pytest.
