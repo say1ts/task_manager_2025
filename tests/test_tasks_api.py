@@ -49,99 +49,123 @@ async def authenticated_client_two(
         },
     )
     token = login_response.json()["access_token"]
-    # Создаем новый клиент, чтобы заголовки не пересекались
     new_client = AsyncClient(transport=client._transport, base_url=client.base_url)
     new_client.headers = {"Authorization": f"Bearer {token}"}
     return new_client
 
 
-async def test_create_task(authenticated_client_one: AsyncClient):
-    task_payload = {
-        "title": "Test Task",
-        "description": "Test Description",
-        "status": "created",
-    }
+@pytest.mark.parametrize(
+    "task_payload, expected_status, expected_title",
+    [
+        (
+            {
+                "title": "Test Task",
+                "description": "Test Description",
+                "status": "created",
+            },
+            status.HTTP_201_CREATED,
+            "Test Task",
+        ),
+        (
+            {"title": "Another Task", "description": None, "status": "in_progress"},
+            status.HTTP_201_CREATED,
+            "Another Task",
+        ),
+        (
+            {"title": "", "description": "Invalid", "status": "created"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            None,
+        ),
+    ],
+    ids=["valid_task", "valid_task_no_description", "invalid_empty_title"],
+)
+async def test_create_task(
+    authenticated_client_one: AsyncClient, task_payload, expected_status, expected_title
+):
+    """Тест создания задачи с разными входными данными."""
     response = await authenticated_client_one.post("/tasks/", json=task_payload)
-
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["title"] == task_payload["title"]
-    assert "task_id" in data
-    assert "user_id" in data  # Проверяем наличие user_id
+    assert response.status_code == expected_status
+    if expected_status == status.HTTP_201_CREATED:
+        data = response.json()
+        assert data["title"] == expected_title
+        assert "task_id" in data
+        assert "user_id" in data
 
 
 async def test_get_all_tasks_isolates_users(
     authenticated_client_one: AsyncClient, authenticated_client_two: AsyncClient
 ):
     """Проверяем, что пользователи видят только свои задачи."""
-    # Пользователь 1 создает задачу
     await authenticated_client_one.post(
         "/tasks/", json={"title": "User One's Task", "status": "created"}
     )
-
-    # Пользователь 2 создает задачу
     await authenticated_client_two.post(
         "/tasks/", json={"title": "User Two's Task", "status": "created"}
     )
 
-    # Пользователь 1 запрашивает свои задачи
     response_one = await authenticated_client_one.get("/tasks/")
     assert response_one.status_code == status.HTTP_200_OK
     data_one = response_one.json()
     assert len(data_one) == 1
     assert data_one[0]["title"] == "User One's Task"
-    assert "user_id" in data_one[0]  # Проверяем наличие user_id
+    assert "user_id" in data_one[0]
 
-    # Пользователь 2 запрашивает свои задачи
     response_two = await authenticated_client_two.get("/tasks/")
     assert response_two.status_code == status.HTTP_200_OK
     data_two = response_two.json()
     assert len(data_two) == 1
     assert data_two[0]["title"] == "User Two's Task"
-    assert "user_id" in data_two[0]  # Проверяем наличие user_id
+    assert "user_id" in data_two[0]
 
 
+@pytest.mark.parametrize(
+    "method, endpoint, payload",
+    [
+        ("get", "/tasks/{}", None),
+        ("put", "/tasks/{}", {"title": "Hacked", "status": "completed"}),
+        ("delete", "/tasks/{}", None),
+    ],
+    ids=["get_task", "update_task", "delete_task"],
+)
 async def test_user_cannot_access_another_users_task(
-    authenticated_client_one: AsyncClient, authenticated_client_two: AsyncClient
+    authenticated_client_one: AsyncClient,
+    authenticated_client_two: AsyncClient,
+    method,
+    endpoint,
+    payload,
 ):
     """Проверяем, что пользователь не может получить, обновить или удалить чужую задачу."""
-    # Пользователь 1 создает задачу
     create_response = await authenticated_client_one.post(
         "/tasks/", json={"title": "Private Task", "status": "created"}
     )
     task_id = create_response.json()["task_id"]
 
-    # Пользователь 2 пытается получить доступ к задаче пользователя 1
-    response = await authenticated_client_two.get(f"/tasks/{task_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    # Пользователь 2 пытается обновить задачу пользователя 1
-    update_payload = {"title": "Hacked", "status": "completed"}
-    response = await authenticated_client_two.put(
-        f"/tasks/{task_id}", json=update_payload
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    # Пользователь 2 пытается удалить задачу пользователя 1
-    response = await authenticated_client_two.delete(f"/tasks/{task_id}")
+    client_method = getattr(authenticated_client_two, method)
+    if method in ("post", "put"):
+        response = await client_method(endpoint.format(task_id), json=payload)
+    else:
+        response = await client_method(endpoint.format(task_id))
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_access_tasks_unauthorized(client: AsyncClient):
+@pytest.mark.parametrize(
+    "method, endpoint, payload",
+    [
+        ("get", "/tasks/", None),
+        ("post", "/tasks/", {"title": "task", "status": "created"}),
+    ],
+    ids=["get_tasks", "create_task"],
+)
+async def test_access_tasks_unauthorized(
+    client: AsyncClient, method, endpoint, payload
+):
     """Тест доступа к эндпоинтам задач без токена аутентификации."""
-    response = await client.get("/tasks/")
+    client_method = getattr(client, method)
+    if method in ("post", "put"):
+        response = await client_method(endpoint, json=payload)
+    else:
+        response = await client_method(endpoint)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    response = await client.post("/tasks/", json={"title": "task", "status": "created"})
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-async def test_create_task_with_invalid_data(authenticated_client_one: AsyncClient):
-    """Тест создания задачи с невалидными данными (пустой заголовок)."""
-    response = await authenticated_client_one.post(
-        "/tasks/", json={"title": "", "status": "created"}
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 async def test_get_task_not_found(authenticated_client_one: AsyncClient):

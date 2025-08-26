@@ -27,7 +27,9 @@ class AbstractTaskRepository(ABC):
         pass
 
     @abstractmethod
-    async def update(self, task_id: UUID, user_id: UUID, update_data: TaskUpdate) -> Task:
+    async def update(
+        self, task_id: UUID, user_id: UUID, update_data: TaskUpdate
+    ) -> Task:
         """Обновить задачу."""
         pass
 
@@ -69,7 +71,9 @@ class TaskSQLAlchemyRepository(AbstractTaskRepository):
         await self.session.refresh(task_orm)
         return Task.model_validate(task_orm)
 
-    async def update(self, task_id: UUID, user_id: UUID, update_data: TaskUpdate) -> Task:
+    async def update(
+        self, task_id: UUID, user_id: UUID, update_data: TaskUpdate
+    ) -> Task:
         task_orm = await self.get_by_id(task_id=task_id, user_id=user_id)
         if not task_orm:
             raise TaskNotFoundError(task_id)

@@ -41,15 +41,9 @@ async def test_get_all_tasks(
     task_service: TaskService, mock_task_repository, sample_user_id, sample_task
 ):
     """Тест успешного получения всех задач для пользователя."""
-    # мок: get_all должен вернуть список с одним DTO
     mock_task_repository.get_all.return_value = [sample_task]
-
     result = await task_service.get_all_tasks(user_id=sample_user_id)
-
-    # Проверяем, что метод репозитория был вызван с правильным user_id
     mock_task_repository.get_all.assert_called_once_with(user_id=sample_user_id)
-
-    # Проверяем, что результат - это список объектов Task
     assert isinstance(result, list)
     assert len(result) == 1
     assert isinstance(result[0], Task)
@@ -62,11 +56,9 @@ async def test_get_task_by_id_success(
 ):
     """Тест успешного получения задачи по ID."""
     mock_task_repository.get_by_id.return_value = sample_task
-
     result = await task_service.get_task_by_id(
         task_id=sample_task.task_id, user_id=sample_user_id
     )
-
     mock_task_repository.get_by_id.assert_called_once_with(
         task_id=sample_task.task_id, user_id=sample_user_id
     )
@@ -80,9 +72,7 @@ async def test_get_task_by_id_not_found(
 ):
     """Тест получения несуществующей задачи."""
     non_existent_id = uuid7()
-    # мок: get_by_id выбрасывает TaskNotFoundError
     mock_task_repository.get_by_id.side_effect = TaskNotFoundError(non_existent_id)
-
     with pytest.raises(TaskNotFoundError):
         await task_service.get_task_by_id(
             task_id=non_existent_id, user_id=sample_user_id
@@ -96,11 +86,8 @@ async def test_create_task(
     task_data = TaskCreate(
         title="New Task", description="New Desc", status=TaskStatus.CREATED
     )
-    # мок: create возвращает созданный DTO
     mock_task_repository.create.return_value = sample_task
-
     result = await task_service.create_task(task_data=task_data, user_id=sample_user_id)
-
     mock_task_repository.create.assert_called_once_with(
         task_data, user_id=sample_user_id
     )
@@ -108,30 +95,59 @@ async def test_create_task(
     assert result.task_id == sample_task.task_id
 
 
+@pytest.mark.parametrize(
+    "update_data, expected_title, expected_description, expected_status",
+    [
+        (
+            TaskUpdate(title="Updated Title"),
+            "Updated Title",
+            "A description",
+            TaskStatus.CREATED,
+        ),
+        (
+            TaskUpdate(description="New Description"),
+            "Sample Task",
+            "New Description",
+            TaskStatus.CREATED,
+        ),
+        (
+            TaskUpdate(status=TaskStatus.COMPLETED),
+            "Sample Task",
+            "A description",
+            TaskStatus.COMPLETED,
+        ),
+    ],
+    ids=["update_title", "update_description", "update_status"],
+)
 async def test_update_task_success(
-    task_service: TaskService, mock_task_repository, sample_user_id, sample_task
+    task_service: TaskService,
+    mock_task_repository,
+    sample_user_id,
+    sample_task,
+    update_data,
+    expected_title,
+    expected_description,
+    expected_status,
 ):
-    """Тест успешного обновления задачи."""
-    update_data = TaskUpdate(title="Updated Title")
-    # мок для возврата обновленной задачи
+    """Тест успешного обновления задачи с разными входными данными."""
     updated_task = Task(
         task_id=sample_task.task_id,
-        title=update_data.title,
-        description=sample_task.description,
-        status=sample_task.status,
-        user_id=sample_task.user_id,  # Теперь user_id есть в схеме
+        title=expected_title,
+        description=expected_description,
+        status=expected_status,
+        user_id=sample_task.user_id,
     )
     mock_task_repository.update.return_value = updated_task
-
     result = await task_service.update_task(
         task_id=sample_task.task_id, update_data=update_data, user_id=sample_user_id
     )
-
     mock_task_repository.update.assert_called_once_with(
         sample_task.task_id, sample_user_id, update_data
     )
     assert isinstance(result, Task)
-    assert result.title == "Updated Title"
+    assert result.title == expected_title
+    assert result.description == expected_description
+    assert result.status == expected_status
 
 
 async def test_update_task_not_found(
@@ -141,7 +157,6 @@ async def test_update_task_not_found(
     update_data = TaskUpdate(title="Updated Title")
     non_existent_id = uuid7()
     mock_task_repository.update.side_effect = TaskNotFoundError(non_existent_id)
-
     with pytest.raises(TaskNotFoundError):
         await task_service.update_task(
             task_id=non_existent_id, update_data=update_data, user_id=sample_user_id
@@ -153,9 +168,7 @@ async def test_delete_task_success(
 ):
     """Тест успешного удаления задачи."""
     mock_task_repository.delete.return_value = None
-
     await task_service.delete_task(task_id=sample_task.task_id, user_id=sample_user_id)
-
     mock_task_repository.delete.assert_called_once_with(
         task_id=sample_task.task_id, user_id=sample_user_id
     )
@@ -167,6 +180,5 @@ async def test_delete_task_not_found(
     """Тест удаления несуществующей задачи."""
     non_existent_id = uuid7()
     mock_task_repository.delete.side_effect = TaskNotFoundError(non_existent_id)
-
     with pytest.raises(TaskNotFoundError):
         await task_service.delete_task(task_id=non_existent_id, user_id=sample_user_id)
