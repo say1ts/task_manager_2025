@@ -3,8 +3,8 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
-from .repository import UserRepository
-from .service import AuthService
+from .repository import AbstractUserRepository, UserRepository
+from .service import AbstractAuthService, AuthService
 from .schemas import UserResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -17,7 +17,7 @@ def get_user_repository(
     return UserRepository(session)
 
 
-UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
+UserRepositoryDep = Annotated[AbstractUserRepository, Depends(get_user_repository)]
 
 
 def get_auth_service(repo: UserRepositoryDep) -> AuthService:
@@ -25,7 +25,7 @@ def get_auth_service(repo: UserRepositoryDep) -> AuthService:
     return AuthService(repo)
 
 
-AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+AuthServiceDep = Annotated[AbstractAuthService, Depends(get_auth_service)]
 
 
 async def get_current_user(

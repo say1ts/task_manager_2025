@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import HTTPException, status
 from app.config import settings
-from .repository import UserRepository
+from .repository import AbstractUserRepository
 from .schemas import UserCreate, UserLogin, UserResponse, TokenData
 
 
@@ -20,11 +20,31 @@ class InvalidCredentialsError(AuthError):
         super().__init__("Invalid email or password.")
 
 
-class AuthService:
+class AbstractAuthService:
     """Сервис для аутентификации и авторизации."""
 
-    def __init__(self, repository: UserRepository):
+    def __init__(self, repository: AbstractUserRepository):
         self.repository = repository
+
+    async def register_user(self, user_data: UserCreate) -> UserResponse:
+        """Регистрирует нового пользователя."""
+        pass
+
+    async def authenticate_user(self, login_data: UserLogin) -> UserResponse:
+        """Аутентифицирует пользователя."""
+        pass
+
+    def create_access_token(self, data: dict) -> str:
+        """Создает JWT access token."""
+        pass
+
+    async def get_current_user(self, token: str) -> UserResponse:
+        """Получает текущего пользователя из токена."""
+        pass
+
+
+class AuthService(AbstractAuthService):
+    """Сервис для аутентификации и авторизации."""
 
     async def register_user(self, user_data: UserCreate) -> UserResponse:
         """Регистрирует нового пользователя."""

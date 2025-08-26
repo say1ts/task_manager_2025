@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from uuid import UUID
 from typing import Optional, Sequence
 from sqlalchemy import select
@@ -6,7 +7,29 @@ from .models import Task
 from .schemas import TaskCreate, TaskUpdate
 
 
-class TaskSQLAlchemyRepository:
+class AbstractTaskRepository(ABC):
+    @abstractmethod
+    async def get_by_id(self, task_id: UUID, user_id: UUID) -> Optional[Task]:
+        pass
+
+    @abstractmethod
+    async def get_all(self, user_id: UUID) -> Sequence[Task]:
+        pass
+
+    @abstractmethod
+    async def create(self, task_data: TaskCreate, user_id: UUID) -> Task:
+        pass
+
+    @abstractmethod
+    async def update(self, task: Task, update_data: TaskUpdate) -> Task:
+        pass
+
+    @abstractmethod
+    async def delete(self, task: Task) -> None:
+        pass
+
+
+class TaskSQLAlchemyRepository(AbstractTaskRepository):
     """
     Слой доступа к данным для задач.
     Работает с сессией SQLAlchemy.
