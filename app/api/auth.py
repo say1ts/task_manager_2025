@@ -2,16 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.auth.schemas import UserLogin
-from app.auth.schemas import UserCreate, UserResponse, Token
+from app.auth.schemas import UserCreate, User, Token
 from app.auth.service import UserAlreadyExistsError, InvalidCredentialsError
 from app.auth.dependencies import AuthServiceDep, CurrentUser
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate, service: AuthServiceDep):
     try:
         return await service.register_user(user)
@@ -33,6 +31,6 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=User)
 async def read_users_me(current_user: CurrentUser):
     return current_user

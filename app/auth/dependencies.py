@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from .repository import AbstractUserRepository, UserRepository
 from .service import AbstractAuthService, AuthService
-from .schemas import UserResponse
+from .schemas import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -30,9 +30,9 @@ AuthServiceDep = Annotated[AbstractAuthService, Depends(get_auth_service)]
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], service: AuthServiceDep
-) -> UserResponse:
+) -> User:
     """Зависимость для получения текущего пользователя."""
     return await service.get_current_user(token)
 
 
-CurrentUser = Annotated[UserResponse, Depends(get_current_user)]
+CurrentUser = Annotated[User, Depends(get_current_user)]

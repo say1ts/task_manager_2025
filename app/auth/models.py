@@ -6,16 +6,15 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+class UserORM(Base):
+    __tablename__ = "user"
 
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
 
-    tasks = relationship("Task", back_populates="owner", cascade="all, delete-orphan")
+    tasks = relationship("TaskORM", back_populates="owner", cascade="all, delete-orphan")
 
     def set_password(self, plain_password: str) -> None:
         """Хэширует и устанавливает пароль."""

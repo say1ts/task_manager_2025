@@ -5,9 +5,11 @@ from sqlalchemy import select
 from app.middleware import CorrelationIdMiddleware
 from app.logging_config import setup_logging, logger
 from app.database import engine
+
 from app.auth import AuthError
 from app.api.task_manager import router as task_manager_router
-from app.task_manager.service import TaskServiceError
+
+from app.task_manager import TaskServiceError
 from app.api.auth import router as auth_router
 
 

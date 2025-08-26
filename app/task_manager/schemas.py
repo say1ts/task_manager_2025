@@ -26,7 +26,7 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
 
 
-# --- Схема для ответа API ---
-class TaskResponse(TaskBase):
+class Task(TaskBase):
     task_id: UUID
+    user_id: UUID
     model_config = ConfigDict(from_attributes=True)

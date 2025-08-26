@@ -1,6 +1,7 @@
 from .dependencies import TaskServiceDep
-from .schemas import TaskCreate, TaskResponse, TaskUpdate, TaskStatus
-from .service import TaskService, TaskNotFoundError, TaskServiceError
+from .schemas import TaskCreate, Task, TaskUpdate, TaskStatus
+from .service import TaskService
+from .exceptions import TaskNotFoundError, TaskServiceError
 
 __all__ = [
     "TaskService",
@@ -9,6 +10,6 @@ __all__ = [
     "TaskNotFoundError",
     "TaskCreate",
     "TaskUpdate",
-    "TaskResponse",
+    "Task",
     "TaskStatus",
 ]

@@ -9,8 +9,8 @@ from alembic import context
 
 # Импортируем Base из вашего проекта
 from app.database import Base
-from app.auth.models import User
-from app.task_manager.models import Task
+from app.auth.models import UserORM
+from app.task_manager.models import TaskORM
 from app.config import settings
 
 # this is the Alembic Config object, which provides

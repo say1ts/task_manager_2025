@@ -6,8 +6,6 @@ from uuid_extensions import uuid7
 
 pytestmark = pytest.mark.asyncio
 
-# --- Фикстуры для создания пользователей и клиентов ---
-
 
 @pytest_asyncio.fixture
 async def user_one_payload():
@@ -51,13 +49,10 @@ async def authenticated_client_two(
         },
     )
     token = login_response.json()["access_token"]
-    # Создаем новый клиент, чтобы заголовки не пересекались (используем _transport для совместимости с httpx >=0.28)
+    # Создаем новый клиент, чтобы заголовки не пересекались
     new_client = AsyncClient(transport=client._transport, base_url=client.base_url)
     new_client.headers = {"Authorization": f"Bearer {token}"}
     return new_client
-
-
-# --- Основные тесты ---
 
 
 async def test_create_task(authenticated_client_one: AsyncClient):
@@ -72,6 +67,7 @@ async def test_create_task(authenticated_client_one: AsyncClient):
     data = response.json()
     assert data["title"] == task_payload["title"]
     assert "task_id" in data
+    assert "user_id" in data  # Проверяем наличие user_id
 
 
 async def test_get_all_tasks_isolates_users(
@@ -94,6 +90,7 @@ async def test_get_all_tasks_isolates_users(
     data_one = response_one.json()
     assert len(data_one) == 1
     assert data_one[0]["title"] == "User One's Task"
+    assert "user_id" in data_one[0]  # Проверяем наличие user_id
 
     # Пользователь 2 запрашивает свои задачи
     response_two = await authenticated_client_two.get("/tasks/")
@@ -101,6 +98,7 @@ async def test_get_all_tasks_isolates_users(
     data_two = response_two.json()
     assert len(data_two) == 1
     assert data_two[0]["title"] == "User Two's Task"
+    assert "user_id" in data_two[0]  # Проверяем наличие user_id
 
 
 async def test_user_cannot_access_another_users_task(
@@ -127,9 +125,6 @@ async def test_user_cannot_access_another_users_task(
     # Пользователь 2 пытается удалить задачу пользователя 1
     response = await authenticated_client_two.delete(f"/tasks/{task_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-# --- Тесты "несчастных случаев" (Sad Paths) ---
 
 
 async def test_access_tasks_unauthorized(client: AsyncClient):

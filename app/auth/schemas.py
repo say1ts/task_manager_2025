@@ -15,9 +15,10 @@ class UserLogin(UserBase):
     password: str
 
 
-class UserResponse(UserBase):
-    id: UUID
+class User(UserBase):
+    user_id: UUID
     is_active: bool
+    hashed_password: str
 
     model_config = ConfigDict(from_attributes=True)
 

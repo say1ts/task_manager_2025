@@ -13,7 +13,7 @@ async def test_register_user_success(client: AsyncClient):
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["email"] == USER_PAYLOAD["email"]
-    assert "id" in data
+    assert "user_id" in data
     assert "is_active" in data
 
 

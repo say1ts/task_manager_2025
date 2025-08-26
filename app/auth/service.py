@@ -1,36 +1,25 @@
-from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import HTTPException, status
+from passlib.context import CryptContext
 from app.config import settings
+from .exceptions import UserAlreadyExistsError, InvalidCredentialsError
 from .repository import AbstractUserRepository
-from .schemas import UserCreate, UserLogin, UserResponse, TokenData
+from .schemas import UserCreate, UserLogin, User, TokenData
 
-
-class AuthError(Exception):
-    pass
-
-
-class UserAlreadyExistsError(AuthError):
-    def __init__(self, email: str):
-        super().__init__(f"User with email {email} already exists.")
-
-
-class InvalidCredentialsError(AuthError):
-    def __init__(self):
-        super().__init__("Invalid email or password.")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class AbstractAuthService:
-    """Сервис для аутентификации и авторизации."""
+    """Абстрактный базовый класс для сервиса аутентификации."""
 
     def __init__(self, repository: AbstractUserRepository):
         self.repository = repository
 
-    async def register_user(self, user_data: UserCreate) -> UserResponse:
+    async def register_user(self, user_data: UserCreate) -> User:
         """Регистрирует нового пользователя."""
         pass
 
-    async def authenticate_user(self, login_data: UserLogin) -> UserResponse:
+    async def authenticate_user(self, login_data: UserLogin) -> User:
         """Аутентифицирует пользователя."""
         pass
 
@@ -38,7 +27,7 @@ class AbstractAuthService:
         """Создает JWT access token."""
         pass
 
-    async def get_current_user(self, token: str) -> UserResponse:
+    async def get_current_user(self, token: str) -> User:
         """Получает текущего пользователя из токена."""
         pass
 
@@ -46,34 +35,27 @@ class AbstractAuthService:
 class AuthService(AbstractAuthService):
     """Сервис для аутентификации и авторизации."""
 
-    async def register_user(self, user_data: UserCreate) -> UserResponse:
-        """Регистрирует нового пользователя."""
+    async def register_user(self, user_data: UserCreate) -> User:
         existing_user = await self.repository.get_by_email(user_data.email)
         if existing_user:
             raise UserAlreadyExistsError(user_data.email)
-        new_user = await self.repository.create(user_data)
-        return UserResponse.model_validate(new_user)
+        return await self.repository.create(user_data)
 
-    async def authenticate_user(self, login_data: UserLogin) -> UserResponse:
-        """Аутентифицирует пользователя."""
+    async def authenticate_user(self, login_data: UserLogin) -> User:
         user = await self.repository.get_by_email(login_data.email)
-        if not user or not user.verify_password(login_data.password):
+        if not user or not pwd_context.verify(
+            login_data.password, user.hashed_password
+        ):
             raise InvalidCredentialsError()
-        return UserResponse.model_validate(user)
+        return user
 
     def create_access_token(self, data: dict) -> str:
-        """Создает JWT access token."""
-        to_encode = data.copy()
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.AUTH_ACCESS_TOKEN_EXPIRE_MINUTES
+        encoded_jwt = jwt.encode(
+            data, settings.AUTH_SECRET_KEY, algorithm=settings.AUTH_ALGORITHM
         )
-        to_encode.update({"exp": expire})
-        return jwt.encode(
-            to_encode, settings.AUTH_SECRET_KEY, algorithm=settings.AUTH_ALGORITHM
-        )
+        return encoded_jwt
 
-    async def get_current_user(self, token: str) -> UserResponse:
-        """Получает текущего пользователя из токена."""
+    async def get_current_user(self, token: str) -> User:
         try:
             payload = jwt.decode(
                 token, settings.AUTH_SECRET_KEY, algorithms=[settings.AUTH_ALGORITHM]
@@ -93,4 +75,4 @@ class AuthService(AbstractAuthService):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
             )
-        return UserResponse.model_validate(user)
+        return user

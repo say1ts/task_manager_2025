@@ -1,7 +1,9 @@
 from .dependencies import AuthServiceDep, CurrentUser
-from .schemas import UserCreate, UserResponse, Token
+from .schemas import UserCreate, User, Token
 from .service import (
     AuthService,
+)
+from .exceptions import (
     UserAlreadyExistsError,
     InvalidCredentialsError,
     AuthError,
@@ -13,7 +15,7 @@ __all__ = [
     "AuthError",
     "CurrentUser",
     "UserCreate",
-    "UserResponse",
+    "User",
     "Token",
     "UserAlreadyExistsError",
     "InvalidCredentialsError",
